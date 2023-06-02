@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#search').keyup(function() {
+            var value = $(this).val().toLowerCase();
+            $('.students-list li').filter(function() {
+                $(this).toggle($(this).data('name').toLowerCase().indexOf(value) > -1)
+            });
+            if ($('.students-list li:visible').length == 0) {
+                $('#not-found').show();
+            } else {
+                $('#not-found').hide();
+            }
+        });
+    });
+    $(document).ready(function() {
+        // 为每个学生列表项添加一个点击事件监听器
+        $('.students-list li').on('click', function(event) {
+            // 只有当点击的目标不是链接或按钮时，才进行重定向
+            if (!$(event.target).is('a, button, input')) {
+                window.location.href = $(this).data('href');
+            }
+        });
+    });
+
+</script>
+{% endblock %}
+{% block content %}
+<div class="search-container">
+    <h3>{{ students|length }}个同学</h3>
+    <input type="text" id="search" placeholder="搜索学生..." autocomplete="off">
+</div>
+<p id="not-found" class="alert alert-warning" style="display: none;">未找到该学生。</p>
+{% if current_user.is_authenticated %}
+<form method="post">
+    <input type="text" name="name" placeholder="学生姓名" autocomplete="off" required>
+    <input class="btn" type="submit" name="submit" value="添加">
+</form>
+{% endif %}
+<ul class="students-list">
+    {% for student in students|reverse %}
+    <li data-name="{{ student.name }}" data-href="{{ url_for('course', student_id=student.id) }}">
+        {{ student.name }}
+        <span class="float-right">
+            {% if current_user.is_authenticated %}
+            <a class="btn" href="{{ url_for('course', student_id=student.id) }}">成绩</a>
+            <a class="btn" href="{{ url_for('edit', student_id=student.id) }}">编辑</a>
+            <form class="inline-form" method="post" action="{{ url_for('delete', student_id=student.id) }}">
+                <input class="delete-btn" type="submit" name="submit" value="删除" onclick="return confirm('确定删除吗？')">
+            </form>
+            {% endif %}
+        </span>
+    </li>
+    {% endfor %}
+</ul>
+<img alt="奔跑" class="dog" src="{{ url_for('static', filename='images/dog.gif') }}">
+{% endblock %}

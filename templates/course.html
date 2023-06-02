@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function() {
+        let chartCreated = false;
+        $('#toggleButton').click(function() {
+            $('#myChart').toggle();
+            $('#courseList').toggle();
+            if ($('#myChart').is(':visible')) {
+                $('#toggleButton').text('隐藏图表');
+                if (!chartCreated) {
+                    createChart();
+                    chartCreated = true;
+                }
+            } else {
+                $('#toggleButton').text('显示图表');
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% block content %}
+<div class="search-container">
+    <h3>{{ student.name }}的成绩</h3>
+    <button id="toggleButton" class="float-right">生成成绩折线图</button>
+</div>
+{% if current_user.is_authenticated %}
+<form method="post">
+    <input type="text" name="course" placeholder="课程" autocomplete="off" required>
+    <input type="number" name="score" placeholder="成绩" autocomplete="off" required>
+    <input type="date" name="exam_date" autocomplete="off" required>
+    <input class="btn" type="submit" name="submit" value="添加成绩">
+</form>
+{% endif %}
+<ul class="course-list" id="courseList">
+    {% if student.courses %}
+        {% for sc in student.courses|reverse %}
+        <li>
+           {{ sc.course.name if sc.course else '' }}:
+            成绩: {{ sc.score if sc.score else '' }}
+           考试日期: {{ sc.exam_date.strftime('%Y-%m-%d') if sc.exam_date else '' }}
+            {% if current_user.is_authenticated %}
+            <span class="float-right">
+                <form class="inline-form" method="post" action="{{ url_for('delete_course', student_id=student.id, course_id=sc.course.id) }}">
+                    <input class="imdb" type="submit" name="submit" value="删除" onclick="return confirm('确定删除吗？')">
+                </form>
+            </span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    {% else %}
+        <li>此学生尚未注册任何课程。</li>
+    {% endif %}
+</ul>
+<div class="chart-container" style="background-color: whitesmoke;">
+    <canvas id="myChart" style="display: none;"></canvas>
+</div>
+<!-- <canvas id="myChart" style="display: none;"></canvas> -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='chart.js') }}"></script>
+{% endblock %}
