@@ -1,9 +1,19 @@
 {% extends 'base.html' %}
+
 {% block content %}
-<h3>登陆</h3>
-<form method="post">
-    <input type="text" name="username" placeholder="用户名" autocomplete="off" required><br><br>
-    <input type="password" name="password" placeholder="密码" autocomplete="off" required><br><br>
-    <input class="btn" type="submit" name="submit" value="登陆">
-</form>
+<section class="panel narrow-panel">
+    <p class="eyebrow">管理员</p>
+    <h1>登录</h1>
+    <form class="stack-form" method="post">
+        <label>
+            <span>用户名</span>
+            <input type="text" name="username" placeholder="用户名" autocomplete="off" required>
+        </label>
+        <label>
+            <span>密码</span>
+            <input type="password" name="password" placeholder="密码" autocomplete="off" required>
+        </label>
+        <input class="btn primary" type="submit" name="submit" value="登录">
+    </form>
+</section>
 {% endblock %}

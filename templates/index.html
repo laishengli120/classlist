@@ -15,46 +15,67 @@
                 $('#not-found').hide();
             }
         });
-    });
-    $(document).ready(function() {
-        // 为每个学生列表项添加一个点击事件监听器
+
         $('.students-list li').on('click', function(event) {
-            // 只有当点击的目标不是链接或按钮时，才进行重定向
             if (!$(event.target).is('a, button, input')) {
                 window.location.href = $(this).data('href');
             }
         });
     });
-
 </script>
 {% endblock %}
+
 {% block content %}
-<div class="search-container">
-    <h3>{{ students|length }}个同学</h3>
-    <input type="text" id="search" placeholder="搜索学生..." autocomplete="off">
-</div>
+<section class="page-hero">
+    <div>
+        <p class="eyebrow">学生档案</p>
+        <h1>班级名单</h1>
+    </div>
+    <div class="hero-stat">
+        <span>{{ students|length }}</span>
+        <small>位学生</small>
+    </div>
+</section>
+
+<section class="toolbar">
+    <div class="search-field">
+        <label for="search">搜索学生</label>
+        <input type="text" id="search" placeholder="输入姓名" autocomplete="off">
+    </div>
+    {% if current_user.is_authenticated %}
+    <form class="inline-add-form" method="post">
+        <label for="student-name">新增学生</label>
+        <div class="field-row">
+            <input id="student-name" type="text" name="name" placeholder="学生姓名" autocomplete="off" required>
+            <input class="btn primary" type="submit" name="submit" value="添加">
+        </div>
+    </form>
+    {% endif %}
+</section>
+
 <p id="not-found" class="alert alert-warning" style="display: none;">未找到该学生。</p>
-{% if current_user.is_authenticated %}
-<form method="post">
-    <input type="text" name="name" placeholder="学生姓名" autocomplete="off" required>
-    <input class="btn" type="submit" name="submit" value="添加">
-</form>
-{% endif %}
+
 <ul class="students-list">
     {% for student in students|reverse %}
     <li data-name="{{ student.name }}" data-href="{{ url_for('course', student_id=student.id) }}">
-        {{ student.name }}
-        <span class="float-right">
+        <div class="student-meta">
+            <span class="avatar">{{ student.name[:1] }}</span>
+            <span class="student-name">{{ student.name }}</span>
+        </div>
+        <span class="item-actions">
             {% if current_user.is_authenticated %}
-            <a class="btn" href="{{ url_for('course', student_id=student.id) }}">成绩</a>
-            <a class="btn" href="{{ url_for('edit', student_id=student.id) }}">编辑</a>
+            <a class="btn ghost" href="{{ url_for('course', student_id=student.id) }}">成绩</a>
+            <a class="btn ghost" href="{{ url_for('edit', student_id=student.id) }}">编辑</a>
             <form class="inline-form" method="post" action="{{ url_for('delete', student_id=student.id) }}">
-                <input class="delete-btn" type="submit" name="submit" value="删除" onclick="return confirm('确定删除吗？')">
+                <input class="btn danger" type="submit" name="submit" value="删除" onclick="return confirm('确定删除吗？')">
             </form>
+            {% else %}
+            <a class="btn ghost" href="{{ url_for('course', student_id=student.id) }}">查看成绩</a>
             {% endif %}
         </span>
     </li>
+    {% else %}
+    <li class="empty-state">暂无学生。</li>
     {% endfor %}
 </ul>
-<img alt="奔跑" class="dog" src="{{ url_for('static', filename='images/dog.gif') }}">
 {% endblock %}

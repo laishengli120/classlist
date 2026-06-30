@@ -1,75 +1,94 @@
 function createChart() {
-    let pathArray = window.location.pathname.split('/');
-    let student_id = pathArray[pathArray.length - 1];  // 获取URL的最后一部分，即学生ID
+    const pathArray = window.location.pathname.split('/');
+    const studentId = pathArray[pathArray.length - 1];
+    const palette = ['#2563eb', '#0f766e', '#c2410c', '#7c3aed', '#0e7490', '#be123c'];
 
-    fetch(`/api/student/course/${student_id}`)
+    fetch(`/api/student/course/${studentId}`)
         .then(response => response.json())
-        .then(course_ids => {
-            let datasets = [];
-            let all_dates = new Set();
+        .then(courseIds => {
+            if (!courseIds.length) {
+                return;
+            }
 
-            Promise.all(course_ids.map(course_id => fetch(`/course/${course_id}/${student_id}`)
-                .then(response => response.json())
-                .then(data => {
-                    data.forEach(item => {
-                        const date = item.exam_date;
-                        all_dates.add(date);
-                    });
-                    return data;
-                })))
-                .then(courseDate => {
-                    let all_dates_array = Array.from(all_dates).sort();
-                    courseDate.forEach((data, index) => {
-                        let course_name = data[0].course_name;
-                        let scores = all_dates_array.map(date => {
-                            const item = data.find(item => item.exam_date === date);
-                            return item ? item.average_score : null;
-                        });
-                        datasets.push({
-                            label: course_name,
-                            data: scores,
-                            fill: false,
-                            // borderColor: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4'][length % 8],
-                            tension: 0.1
-                        });
-                    }); // end of courseDate.forEach
-                    if (datasets.length === course_ids.length) {
-                        const ctx = document.getElementById('myChart').getContext('2d');
-                        ctx.fillStyle = 'yellow';
-                        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                        new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: all_dates_array,
-                                datasets: datasets
-                            },
-                            options: {
-                                layout: {
-                                    padding: {
-                                        left: 10,
-                                        right: 10,
-                                        top: 10,
-                                        bottom: 10
-                                    }
-                                },
-                                scales: {
-                                    y: {
-                                        grid: {
-                            
-                                            lineWidth: 1.5,
-                                            drawBorder: false
-                                        },
-                                    },
-                                    x: {
-                                        grid: {
-                                            display: false
-                                        }
-                                    }
-                                }
-                            }
+            return Promise.all(
+                courseIds.map(courseId =>
+                    fetch(`/course/${courseId}/${studentId}`).then(response => response.json())
+                )
+            );
+        })
+        .then(courseGroups => {
+            if (!courseGroups) {
+                return;
+            }
 
-                        });
-                    }
-                });
+            const allDates = new Set();
+            courseGroups.forEach(group => {
+                group.forEach(item => allDates.add(item.exam_date));
             });
-        };
+            const labels = Array.from(allDates).sort();
+
+            const datasets = courseGroups
+                .filter(group => group.length)
+                .map((group, index) => {
+                    const color = palette[index % palette.length];
+                    return {
+                        label: group[0].course_name,
+                        data: labels.map(date => {
+                            const item = group.find(score => score.exam_date === date);
+                            return item ? item.average_score : null;
+                        }),
+                        fill: false,
+                        borderColor: color,
+                        backgroundColor: color,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        tension: 0.25,
+                    };
+                });
+
+            if (!datasets.length) {
+                return;
+            }
+
+            const ctx = document.getElementById('myChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#172033',
+                                font: { family: 'Inter, Noto Sans SC, sans-serif' },
+                            },
+                        },
+                    },
+                    layout: {
+                        padding: {
+                            left: 10,
+                            right: 10,
+                            top: 10,
+                            bottom: 10,
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#64748b' },
+                            grid: {
+                                color: '#e2e8f0',
+                                lineWidth: 1,
+                                drawBorder: false,
+                            },
+                        },
+                        x: {
+                            ticks: { color: '#64748b' },
+                            grid: {
+                                display: false,
+                            },
+                        },
+                    },
+                },
+            });
+        });
+}

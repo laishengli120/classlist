@@ -1,61 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">
-                    {% if category == 'warning' %}
-                        <i class="fas fa-exclamation-circle"></i> 
-                    {% elif category == 'success' %}
-                        <i class="fas fa-check-circle"></i>
-                    {% endif %}
-                    {{ message }}
-                </div>
-                <script>
-                    setTimeout(function() {
-                        document.querySelector('.alert').style.display = 'none';
-                    }, 2000);
-                </script>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-    
-    {% block head %}{% endblock %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ user.username }}</title>
-    <!-- <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}"> -->
+    <title>{{ user.username if user else 'Classlist' }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" type="text/css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
-    
+    {% block head %}{% endblock %}
 </head>
 <body>
-    <h2>
-        {% if current_user.is_authenticated %}
-        <img alt="HMQ" class="HMQ" src="{{ url_for('static', filename='images/cat.jpg') }}">
-        Hi, {{ user.username }}!
-        {% else %}
-        <img alt="HMQ" class="HMQ" src="{{ url_for('static', filename='images/cat.jpg') }}">
-        您好, 家长!
-        {% endif %}
-    </h2>
-    <nav>
-        <ul>
-            <li><a href="{{ url_for('index') }}">主页</a></li>
-            {% if current_user.is_authenticated %}
-            <li><a href="{{ url_for('settings') }}">设置</a></li>
-            <li><a href="{{ url_for('logout') }}">登出</a></li>
-            {% else %}
-            <li><a href="{{ url_for('login') }}">登陆</a></li>
+    <div class="app-shell">
+        <header class="app-header">
+            <a class="brand" href="{{ url_for('index') }}" aria-label="返回主页">
+                <span class="brand-mark">C</span>
+                <span>
+                    <span class="brand-name">Classlist</span>
+                    <span class="brand-subtitle">班级成绩管理</span>
+                </span>
+            </a>
+            <nav class="nav-links" aria-label="主导航">
+                <a href="{{ url_for('index') }}">主页</a>
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('settings') }}">设置</a>
+                <a href="{{ url_for('logout') }}">退出</a>
+                {% else %}
+                <a href="{{ url_for('login') }}">登录</a>
+                {% endif %}
+            </nav>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-stack" aria-live="polite">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            <script>
+                window.setTimeout(function() {
+                    document.querySelectorAll('.flash-stack .alert').forEach(function(item) {
+                        item.style.display = 'none';
+                    });
+                }, 2400);
+            </script>
             {% endif %}
-        </ul>
-    </nav>
-    {% block content %}
-    {% endblock %}
-    <footer>
-        <small>&copy;2023 班级管理系统</small>
-    </footer>
+        {% endwith %}
+
+        <main class="page-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="app-footer">
+            <small>&copy; 2026 Classlist</small>
+        </footer>
+    </div>
 </body>
 </html>

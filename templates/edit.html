@@ -1,9 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h3>编辑学生信息</h3>
-<form method="post">
-    <input type="text" name="name" placeholder="学生姓名" autocomplete="off" required value="{{ student.name }}">
-    <input class="btn" type="submit" name="submit" value="更新信息">
-</form>
+<section class="panel narrow-panel">
+    <p class="eyebrow">学生信息</p>
+    <h1>编辑学生</h1>
+    <form class="stack-form" method="post">
+        <label>
+            <span>学生姓名</span>
+            <input type="text" name="name" placeholder="学生姓名" autocomplete="off" required value="{{ student.name }}">
+        </label>
+        <input class="btn primary" type="submit" name="submit" value="更新信息">
+    </form>
+</section>
 {% endblock %}
