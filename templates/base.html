@@ -3,60 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ user.username if user else 'Classlist' }}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" type="text/css">
     {% block head %}{% endblock %}
 </head>
 <body>
-    <div class="app-shell">
-        <header class="app-header">
-            <a class="brand" href="{{ url_for('index') }}" aria-label="返回主页">
-                <span class="brand-mark">C</span>
-                <span>
-                    <span class="brand-name">Classlist</span>
-                    <span class="brand-subtitle">班级成绩管理</span>
+{% if current_user.is_authenticated %}
+    <div class="workspace-shell">
+        <aside class="sidebar">
+            <a class="brand" href="{{ url_for('dashboard') }}" aria-label="返回工作台">
+                <span class="brand-mark">绩</span>
+                <span class="brand-copy">
+                    <span class="brand-name">成绩簿</span>
+                    <span class="brand-subtitle">
+                        {{ workspace.class_group.name if workspace.class_group else "教师工作台" }}
+                    </span>
                 </span>
             </a>
-            <nav class="nav-links" aria-label="主导航">
-                <a href="{{ url_for('index') }}">主页</a>
-                {% if current_user.is_authenticated %}
-                <a href="{{ url_for('settings') }}">设置</a>
-                <a href="{{ url_for('logout') }}">退出</a>
-                {% else %}
-                <a href="{{ url_for('login') }}">登录</a>
-                {% endif %}
-            </nav>
-        </header>
 
+            <div class="sidebar-context">
+                <strong>{{ workspace.class_group.name if workspace.class_group else "未设置班级" }}</strong>
+                <span>
+                    {{ workspace.term.name if workspace.term else "未设置学期" }}
+                    {% if workspace.subject %} · {{ workspace.subject.name }}{% endif %}
+                </span>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="主导航">
+                <p>工作台</p>
+                <a class="nav-item {% if request.endpoint == 'dashboard' %}is-active{% endif %}" href="{{ url_for('dashboard') }}">今日概览</a>
+                <a class="nav-item {% if request.endpoint == 'exam_entry' %}is-active{% endif %}" href="{{ url_for('exam_entry', exam_id=entry_exam.id) if entry_exam else url_for('exams') }}">成绩录入</a>
+
+                <p>成绩</p>
+                <a class="nav-item {% if request.endpoint in ['exams'] %}is-active{% endif %}" href="{{ url_for('exams') }}">考试记录</a>
+
+                <p>学生</p>
+                <a class="nav-item {% if request.endpoint in ['students', 'student_detail', 'edit_student'] %}is-active{% endif %}" href="{{ url_for('students') }}">学生名单</a>
+
+                <p>分析</p>
+                <a class="nav-item {% if request.endpoint == 'analysis_class' %}is-active{% endif %}" href="{{ url_for('analysis_class') }}">班级分析</a>
+
+                <p>系统</p>
+                <a class="nav-item {% if request.endpoint == 'settings' %}is-active{% endif %}" href="{{ url_for('settings') }}">班级与规则</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span>{{ current_user.name }}</span>
+                <a href="{{ url_for('logout') }}">退出</a>
+            </div>
+        </aside>
+
+        <div class="workspace-main">
+            <header class="topbar">
+                <div class="topbar-copy">
+                    <p class="context-line">
+                        正在查看
+                        <span>{{ workspace.class_group.name if workspace.class_group else "未设置班级" }}</span>
+                        {% if workspace.subject %} · <span>{{ workspace.subject.name }}</span>{% endif %}
+                        {% if workspace.term %} · <span>{{ workspace.term.name }}</span>{% endif %}
+                    </p>
+                    <h1>{% block page_title %}教师成绩工作台{% endblock %}</h1>
+                </div>
+                <div class="topbar-actions">
+                    <details class="context-switcher">
+                        <summary>切换范围</summary>
+                        <form method="get" action="{{ request.path }}">
+                            <label>
+                                <span>班级</span>
+                                <select name="class_id">
+                                    {% for class_group in workspace.class_groups %}
+                                    <option value="{{ class_group.id }}" {% if workspace.class_group and class_group.id == workspace.class_group.id %}selected{% endif %}>{{ class_group.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>学期</span>
+                                <select name="term_id">
+                                    {% for term in workspace.terms %}
+                                    <option value="{{ term.id }}" {% if workspace.term and term.id == workspace.term.id %}selected{% endif %}>{{ term.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>科目</span>
+                                <select name="subject_id">
+                                    {% for subject in workspace.subjects %}
+                                    <option value="{{ subject.id }}" {% if workspace.subject and subject.id == workspace.subject.id %}selected{% endif %}>{{ subject.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <button class="btn secondary" type="submit">应用</button>
+                        </form>
+                    </details>
+                    {% block top_actions %}{% endblock %}
+                </div>
+            </header>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-stack" aria-live="polite">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            <main class="page-content">
+{% else %}
+    <main class="auth-shell">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             <div class="flash-stack" aria-live="polite">
                 {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">
-                    {{ message }}
-                </div>
+                <div class="alert alert-{{ category }}">{{ message }}</div>
                 {% endfor %}
             </div>
-            <script>
-                window.setTimeout(function() {
-                    document.querySelectorAll('.flash-stack .alert').forEach(function(item) {
-                        item.style.display = 'none';
-                    });
-                }, 2400);
-            </script>
             {% endif %}
         {% endwith %}
+{% endif %}
 
-        <main class="page-content">
-            {% block content %}{% endblock %}
-        </main>
+{% block content %}{% endblock %}
 
-        <footer class="app-footer">
-            <small>&copy; 2026 Classlist</small>
-        </footer>
+{% if current_user.is_authenticated %}
+            </main>
+        </div>
     </div>
+{% else %}
+    </main>
+{% endif %}
 </body>
 </html>

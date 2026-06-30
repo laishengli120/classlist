@@ -1,15 +1,158 @@
 {% extends "base.html" %}
 
+{% block title %}班级与规则 · {{ app_name }}{% endblock %}
+{% block page_title %}班级与规则{% endblock %}
+
 {% block content %}
-<section class="panel narrow-panel">
-    <p class="eyebrow">偏好设置</p>
-    <h1>账号设置</h1>
-    <form class="stack-form" method="post">
-        <label>
-            <span>显示名称</span>
-            <input type="text" name="name" placeholder="用户名" autocomplete="off" required value="{{ current_user.name }}">
-        </label>
-        <input class="btn primary" type="submit" name="submit" value="保存">
-    </form>
+<section class="settings-grid">
+    <article class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">账号</p>
+                <h2>教师信息</h2>
+            </div>
+        </div>
+        <form class="stack-form" method="post">
+            <input type="hidden" name="action" value="profile">
+            <label>
+                <span>显示名称</span>
+                <input type="text" name="name" value="{{ current_user.name }}" required>
+            </label>
+            <label>
+                <span>用户名</span>
+                <input type="text" name="username" value="{{ current_user.username }}" required>
+            </label>
+            <button class="btn primary" type="submit">保存账号</button>
+        </form>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">班级</p>
+                <h2>班级与学年</h2>
+            </div>
+        </div>
+        <form class="stack-form" method="post">
+            <input type="hidden" name="action" value="class">
+            <label>
+                <span>班级名称</span>
+                <input type="text" name="name" placeholder="例如：四年级 2 班" required>
+            </label>
+            <label>
+                <span>学年</span>
+                <input type="text" name="school_year" placeholder="2026" value="2026">
+            </label>
+            <button class="btn secondary" type="submit">添加班级</button>
+        </form>
+        <div class="simple-list">
+            {% for class_group in class_groups %}
+            <div>
+                <strong>{{ class_group.name }}</strong>
+                <span>{{ class_group.school_year }} 学年 · {{ class_group.students|length }} 名学生</span>
+            </div>
+            {% else %}
+            <p class="muted">暂无班级。</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">学期</p>
+                <h2>教学周期</h2>
+            </div>
+        </div>
+        <form class="stack-form" method="post">
+            <input type="hidden" name="action" value="term">
+            <label>
+                <span>所属班级</span>
+                <select name="class_group_id" required>
+                    {% for class_group in class_groups %}
+                    <option value="{{ class_group.id }}" {% if workspace.class_group and workspace.class_group.id == class_group.id %}selected{% endif %}>{{ class_group.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>学期名称</span>
+                <input type="text" name="name" placeholder="例如：2026 年春季学期" required>
+            </label>
+            <div class="two-fields">
+                <label>
+                    <span>开始日期</span>
+                    <input type="date" name="starts_on">
+                </label>
+                <label>
+                    <span>结束日期</span>
+                    <input type="date" name="ends_on">
+                </label>
+            </div>
+            <label class="check-row">
+                <input type="checkbox" name="is_active" value="1" checked>
+                <span>设为当前学期</span>
+            </label>
+            <button class="btn secondary" type="submit">添加学期</button>
+        </form>
+        <div class="simple-list">
+            {% for term in workspace.terms %}
+            <div>
+                <strong>{{ term.name }}</strong>
+                <span>{{ term.starts_on.strftime("%Y-%m-%d") }}{% if term.ends_on %} 至 {{ term.ends_on.strftime("%Y-%m-%d") }}{% endif %}{% if term.is_active %} · 当前{% endif %}</span>
+            </div>
+            {% else %}
+            <p class="muted">暂无学期。</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">科目</p>
+                <h2>低饱和配色</h2>
+            </div>
+        </div>
+        <form class="stack-form" method="post">
+            <input type="hidden" name="action" value="subject">
+            <label>
+                <span>科目名称</span>
+                <input type="text" name="name" placeholder="例如：数学" required>
+            </label>
+            <label>
+                <span>标识颜色</span>
+                <input type="text" name="color" value="#C96442">
+            </label>
+            <button class="btn secondary" type="submit">添加科目</button>
+        </form>
+        <div class="subject-chip-list">
+            {% for subject in subjects %}
+            <span style="--chip-color: {{ subject.color }};">{{ subject.name }}</span>
+            {% else %}
+            <p class="muted">暂无科目。</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">评分</p>
+                <h2>等级规则</h2>
+            </div>
+        </div>
+        <form class="stack-form" method="post">
+            <input type="hidden" name="action" value="grade_rule">
+            <label>
+                <span>优秀线</span>
+                <input type="number" name="excellent_min" min="1" max="100" value="{{ grade_rule.excellent_min }}" required>
+            </label>
+            <label>
+                <span>及格线</span>
+                <input type="number" name="pass_min" min="0" max="99" value="{{ grade_rule.pass_min }}" required>
+            </label>
+            <button class="btn primary" type="submit">保存规则</button>
+        </form>
+    </article>
 </section>
 {% endblock %}

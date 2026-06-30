@@ -1,15 +1,25 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
+{% block title %}编辑学生 · {{ app_name }}{% endblock %}
+{% block page_title %}编辑学生{% endblock %}
 
 {% block content %}
 <section class="panel narrow-panel">
-    <p class="eyebrow">学生信息</p>
-    <h1>编辑学生</h1>
+    <p class="eyebrow">{{ student.class_group.name }}</p>
+    <h2>{{ student.name }}</h2>
     <form class="stack-form" method="post">
         <label>
             <span>学生姓名</span>
             <input type="text" name="name" placeholder="学生姓名" autocomplete="off" required value="{{ student.name }}">
         </label>
-        <input class="btn primary" type="submit" name="submit" value="更新信息">
+        <label>
+            <span>学号</span>
+            <input type="text" name="student_number" placeholder="可选" autocomplete="off" value="{{ student.student_number or '' }}">
+        </label>
+        <div class="form-actions">
+            <a class="btn ghost" href="{{ url_for('student_detail', student_id=student.id) }}">返回档案</a>
+            <button class="btn primary" type="submit">保存学生</button>
+        </div>
     </form>
 </section>
 {% endblock %}

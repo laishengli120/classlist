@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}成绩录入 · {{ exam.title }}{% endblock %}
+{% block page_title %}{{ exam.title }}{% endblock %}
+
+{% block top_actions %}
+<a class="btn secondary" href="{{ url_for('analysis_class') }}">查看分析</a>
+<a class="btn ghost" href="{{ url_for('export_exam_scores', exam_id=exam.id) }}">导出 CSV</a>
+{% endblock %}
+
+{% block content %}
+<section class="entry-summary">
+    <div>
+        <p class="eyebrow">{{ exam.class_group.name }} · {{ exam.term.name }} · {{ exam.subject.name }}</p>
+        <h2>{{ rows|length }} 名学生 · 已录入 <span id="entered-count">{{ stats.entered_count }}</span> 人 · 未录入 <span id="pending-count">{{ stats.pending_count }}</span> 人</h2>
+    </div>
+    <div class="save-indicator" id="save-indicator" aria-live="polite">已保存</div>
+    <div class="progress-block">
+        <span id="progress-label">{{ stats.progress }}%</span>
+        <div class="progress-track" id="entry-progress" style="--progress: {{ stats.progress }}%;"><span></span></div>
+    </div>
+    <form class="csv-import-form" method="post" action="{{ url_for('import_exam_scores', exam_id=exam.id) }}" enctype="multipart/form-data">
+        <label class="btn ghost">
+            导入 CSV
+            <input type="file" name="file" accept=".csv,text/csv" onchange="this.form.submit()">
+        </label>
+    </form>
+</section>
+
+<section class="entry-layout">
+    <div class="panel entry-table-panel">
+        <div class="document-table-wrap">
+            <table class="document-table entry-table">
+                <thead>
+                    <tr>
+                        <th>姓名</th>
+                        <th>成绩</th>
+                        <th>等级</th>
+                        <th>较上次</th>
+                        <th>备注</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr class="score-row"
+                        data-student-id="{{ row.student.id }}"
+                        data-student-name="{{ row.student.name }}"
+                        data-student-number="{{ row.student.student_number or '' }}"
+                        data-history='{{ row.history|tojson }}'
+                        data-status="{{ row.status_label }}">
+                        <td>
+                            <button class="student-cell" type="button">
+                                <span class="avatar">{{ row.student.name[:1] }}</span>
+                                <span>
+                                    <strong>{{ row.student.name }}</strong>
+                                    <small>{{ row.student.student_number or "未填写学号" }}</small>
+                                </span>
+                            </button>
+                        </td>
+                        <td>
+                            <input class="score-input" type="text" inputmode="numeric" value="{{ row.display }}" aria-label="{{ row.student.name }}成绩">
+                        </td>
+                        <td class="grade-cell">{{ row.grade }}</td>
+                        <td class="change-cell {% if row.change and row.change > 0 %}is-up{% elif row.change and row.change < 0 %}is-down{% endif %}">
+                            {% if row.change is not none %}{{ "+" if row.change > 0 else "" }}{{ row.change }}{% else %}—{% endif %}
+                        </td>
+                        <td>
+                            <input class="remark-input" type="text" value="{{ row.score.remark if row.score and row.score.remark else '' }}" placeholder="添加备注">
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="empty-cell">暂无学生。</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <aside class="panel entry-helper" id="entry-helper">
+        <p class="eyebrow">学生观察</p>
+        <h2 id="helper-name">选择学生</h2>
+        <p class="muted" id="helper-meta">点击表格中的姓名或成绩单元格。</p>
+        <div class="helper-section">
+            <span>最近成绩</span>
+            <strong id="helper-history">—</strong>
+        </div>
+        <div class="helper-section">
+            <span>本次状态</span>
+            <strong id="helper-status">未选择</strong>
+        </div>
+        <div class="helper-section">
+            <span>教学提示</span>
+            <p id="helper-tip">录入后会根据最近成绩显示变化。</p>
+        </div>
+    </aside>
+</section>
+
+<script>
+    window.entryConfig = {
+        examId: {{ exam.id }},
+        saveUrlTemplate: "{{ url_for('save_score', exam_id=exam.id, student_id=0) }}"
+    };
+</script>
+<script src="{{ url_for('static', filename='entry.js') }}"></script>
+{% endblock %}

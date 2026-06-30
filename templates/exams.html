@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}考试记录 · {{ app_name }}{% endblock %}
+{% block page_title %}考试记录{% endblock %}
+
+{% block content %}
+<section class="toolbar-panel">
+    <div>
+        <p class="eyebrow">新建考试</p>
+        <h2>{{ workspace.class_group.name }} · {{ workspace.term.name }}</h2>
+    </div>
+    <form class="exam-create-form" method="post">
+        <label>
+            <span>考试名称</span>
+            <input type="text" name="title" placeholder="例如：数学第五单元测试" required>
+        </label>
+        <label>
+            <span>科目</span>
+            <select name="subject_id" required>
+                {% for subject in workspace.subjects %}
+                <option value="{{ subject.id }}" {% if workspace.subject and workspace.subject.id == subject.id %}selected{% endif %}>{{ subject.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>类型</span>
+            <input type="text" name="exam_type" value="单元测试" required>
+        </label>
+        <label>
+            <span>日期</span>
+            <input type="date" name="exam_date" required>
+        </label>
+        <label>
+            <span>满分</span>
+            <input type="number" name="full_score" value="100" min="1" max="300" required>
+        </label>
+        <button class="btn primary" type="submit">＋ 新建考试</button>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">{{ workspace.subject.name if workspace.subject else "全部科目" }}</p>
+            <h2>考试档案</h2>
+        </div>
+    </div>
+    <div class="document-table-wrap">
+        <table class="document-table">
+            <thead>
+                <tr>
+                    <th>考试</th>
+                    <th>日期</th>
+                    <th>平均分</th>
+                    <th>录入</th>
+                    <th>及格率</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in exam_rows %}
+                <tr>
+                    <td>
+                        <div class="table-title">
+                            <strong>{{ row.exam.title }}</strong>
+                            <span>{{ row.exam.subject.name }} · {{ row.exam.exam_type }} · 满分 {{ row.exam.full_score }}</span>
+                        </div>
+                    </td>
+                    <td>{{ row.exam.exam_date.strftime("%Y-%m-%d") }}</td>
+                    <td>{{ row.stats.average if row.stats.average is not none else "—" }}</td>
+                    <td>
+                        <div class="mini-progress">
+                            <span>{{ row.stats.entered_count }} / {{ row.stats.class_size }}</span>
+                            <i style="--progress: {{ row.stats.progress }}%;"></i>
+                        </div>
+                    </td>
+                    <td>{{ row.stats.pass_rate if row.stats.pass_rate is not none else "—" }}{% if row.stats.pass_rate is not none %}%{% endif %}</td>
+                    <td>
+                        <div class="row-actions">
+                            <a class="text-link" href="{{ url_for('exam_entry', exam_id=row.exam.id) }}">录入</a>
+                            <form method="post" action="{{ url_for('delete_exam', exam_id=row.exam.id) }}">
+                                <button class="text-danger" type="submit" onclick="return confirm('确定删除这场考试吗？')">删除</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="empty-cell">暂无考试记录。</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

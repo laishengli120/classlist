@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.name }} · 学生档案{% endblock %}
+{% block page_title %}{{ student.name }}{% endblock %}
+
+{% block top_actions %}
+<a class="btn secondary" href="{{ url_for('edit_student', student_id=student.id) }}">编辑资料</a>
+{% endblock %}
+
+{% block content %}
+<section class="profile-hero">
+    <div>
+        <p class="eyebrow">{{ student.class_group.name }} · 学号 {{ student.student_number or "未填写" }}</p>
+        <h2>{{ student.name }}</h2>
+    </div>
+    <div class="profile-metrics">
+        <div>
+            <strong>{{ average if average is not none else "—" }}</strong>
+            <span>本学期平均分</span>
+        </div>
+        <div>
+            <strong>{% if rank %}{{ rank }} / {{ ranked_count }}{% else %}—{% endif %}</strong>
+            <span>班级排名</span>
+        </div>
+        <div>
+            <strong>{{ subject_rows|length }}</strong>
+            <span>有记录科目</span>
+        </div>
+    </div>
+</section>
+
+<section class="content-grid detail-grid">
+    <div class="detail-main">
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">成绩变化</p>
+                    <h2>本学期趋势</h2>
+                </div>
+            </div>
+            <div class="chart-panel">
+                <canvas id="trendChart" data-chart="trend"></canvas>
+            </div>
+        </article>
+
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">各科表现</p>
+                    <h2>科目平均</h2>
+                </div>
+            </div>
+            <div class="subject-bars">
+                {% for row in subject_rows %}
+                <div class="subject-bar" style="--bar: {{ row.average }}%; --bar-color: {{ row.color }};">
+                    <span>{{ row.name }}</span>
+                    <div><i></i></div>
+                    <strong>{{ row.average }}</strong>
+                </div>
+                {% else %}
+                <p class="muted">暂无可展示的科目成绩。</p>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">最近成绩</p>
+                    <h2>时间线</h2>
+                </div>
+            </div>
+            <div class="timeline-list">
+                {% for score, exam, subject in timeline %}
+                <div class="timeline-item">
+                    <time>{{ exam.exam_date.strftime("%Y-%m-%d") }}</time>
+                    <span>{{ subject.name }} · {{ exam.title }}</span>
+                    <strong>{{ score.score }}</strong>
+                </div>
+                {% else %}
+                <p class="muted">暂无成绩记录。</p>
+                {% endfor %}
+            </div>
+        </article>
+    </div>
+
+    <aside class="detail-side">
+        <section class="panel observation-panel">
+            <div class="panel-header compact">
+                <div>
+                    <p class="eyebrow">教学观察</p>
+                    <h2>教师记录</h2>
+                </div>
+            </div>
+            <form class="stack-form" method="post">
+                <label>
+                    <span>日期</span>
+                    <input type="date" name="note_date" value="{{ request.args.get('date', '') }}">
+                </label>
+                <label>
+                    <span>记录</span>
+                    <textarea name="content" rows="4" placeholder="记录课堂表现、失分原因或后续关注点"></textarea>
+                </label>
+                <button class="btn primary" type="submit">添加记录</button>
+            </form>
+            <div class="note-list">
+                {% for note in student.notes %}
+                <article>
+                    <time>{{ note.note_date.strftime("%Y-%m-%d") }}</time>
+                    <p>{{ note.content }}</p>
+                </article>
+                {% else %}
+                <p class="muted">暂无教师记录。</p>
+                {% endfor %}
+            </div>
+        </section>
+    </aside>
+</section>
+
+<script>
+    window.classlistCharts = {
+        trend: {{ trend_data|tojson }}
+    };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='chart.js') }}"></script>
+{% endblock %}

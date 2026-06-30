@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}班级分析 · {{ app_name }}{% endblock %}
+{% block page_title %}班级分析{% endblock %}
+
+{% block top_actions %}
+<a class="btn primary" href="{{ url_for('exam_entry', exam_id=latest_exam.id) if latest_exam else url_for('exams') }}">＋ 录入成绩</a>
+{% endblock %}
+
+{% block content %}
+<section class="analysis-lead">
+    <p class="eyebrow">{{ workspace.class_group.name if workspace.class_group else "" }} · {{ workspace.subject.name if workspace.subject else "全部科目" }}</p>
+    <h2>{{ conclusion }}</h2>
+</section>
+
+<section class="analysis-metrics">
+    <div>
+        <span>最近平均分</span>
+        <strong>{{ latest_stats.average if latest_stats and latest_stats.average is not none else "—" }}</strong>
+    </div>
+    <div>
+        <span>较上次</span>
+        <strong>{% if average_change is not none %}{{ "+" if average_change > 0 else "" }}{{ average_change }}{% else %}—{% endif %}</strong>
+    </div>
+    <div>
+        <span>中位数</span>
+        <strong>{{ summary.median if summary.median is not none else "—" }}</strong>
+    </div>
+    <div>
+        <span>最高 / 最低</span>
+        <strong>{% if summary.highest and summary.lowest %}{{ summary.highest.value }} / {{ summary.lowest.value }}{% else %}—{% endif %}</strong>
+    </div>
+    <div>
+        <span>分差</span>
+        <strong>{{ summary.gap if summary.gap is not none else "—" }}</strong>
+    </div>
+    <div>
+        <span>标准差</span>
+        <strong>{{ summary.standard_deviation if summary.standard_deviation is not none else "—" }}</strong>
+    </div>
+    <div>
+        <span>完成率</span>
+        <strong>{{ summary.completion_rate }}%</strong>
+    </div>
+    <div>
+        <span>低分 / 明显下降</span>
+        <strong>{{ summary.low_count }} / {{ summary.decline_count }}</strong>
+    </div>
+</section>
+
+<section class="content-grid two-column">
+    <article class="panel span-main">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">核心趋势</p>
+                <h2>平均分变化</h2>
+            </div>
+        </div>
+        <div class="chart-panel">
+            <canvas id="trendChart" data-chart="trend"></canvas>
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">成绩分布</p>
+                <h2>{{ latest_exam.title if latest_exam else "暂无考试" }}</h2>
+            </div>
+        </div>
+        <div class="chart-panel compact-chart">
+            <canvas id="distributionChart" data-chart="distribution"></canvas>
+        </div>
+        <div class="distribution-list">
+            {% for row in distribution %}
+            <div class="distribution-row" style="--bar: {{ row.share }}%;">
+                <span>{{ row.label }}</span>
+                <i><b></b></i>
+                <strong>{{ row.count }} 人</strong>
+            </div>
+            {% else %}
+            <p class="muted">暂无分布数据。</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="content-grid three-column">
+    <article class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">分数结构</p>
+                <h2>最高、最低与离散度</h2>
+            </div>
+        </div>
+        <div class="insight-list">
+            <div>
+                <span>最高分</span>
+                <strong>{% if summary.highest %}{{ summary.highest.student.name }} · {{ summary.highest.value }}{% else %}—{% endif %}</strong>
+            </div>
+            <div>
+                <span>最低分</span>
+                <strong>{% if summary.lowest %}{{ summary.lowest.student.name }} · {{ summary.lowest.value }}{% else %}—{% endif %}</strong>
+            </div>
+            <div>
+                <span>未计入均分</span>
+                <strong>{{ summary.non_numeric_count }} 人</strong>
+            </div>
+            <div>
+                <span>本次有提升</span>
+                <strong>{{ summary.improved_count }} 人</strong>
+            </div>
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">提升最多</p>
+                <h2>正向变化</h2>
+            </div>
+        </div>
+        <div class="rank-list">
+            {% for row in summary.top_improvers %}
+            <a href="{{ url_for('student_detail', student_id=row.student.id) }}">
+                <span>{{ loop.index }}</span>
+                <strong>{{ row.student.name }}</strong>
+                <em>+{{ row.change }}</em>
+            </a>
+            {% else %}
+            <p class="muted">暂无可比较的提升数据。</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">下降最多</p>
+                <h2>需要复盘</h2>
+            </div>
+        </div>
+        <div class="rank-list is-danger">
+            {% for row in summary.top_decliners %}
+            <a href="{{ url_for('student_detail', student_id=row.student.id) }}">
+                <span>{{ loop.index }}</span>
+                <strong>{{ row.student.name }}</strong>
+                <em>{{ row.change }}</em>
+            </a>
+            {% else %}
+            <p class="muted">暂无明显下降数据。</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="content-grid two-column">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">需要关注</p>
+                <h2>{{ focus_rows|length }} 名学生</h2>
+            </div>
+        </div>
+        <div class="focus-list">
+            {% for row in focus_rows %}
+            <a class="focus-item tone-{{ row.tone }}" href="{{ url_for('student_detail', student_id=row.student.id) }}">
+                <span>{{ row.student.name[:1] }}</span>
+                <strong>{{ row.student.name }}</strong>
+                <small>{{ row.reason }}</small>
+            </a>
+            {% else %}
+            <p class="muted">暂无需要重点关注的学生。</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">最近考试对比</p>
+                <h2>关键指标横看</h2>
+            </div>
+        </div>
+        <div class="document-table-wrap">
+            <table class="document-table compact-table">
+                <thead>
+                    <tr>
+                        <th>考试</th>
+                        <th>均分</th>
+                        <th>变化</th>
+                        <th>录入</th>
+                        <th>优秀率</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in compare_rows %}
+                    <tr>
+                        <td>
+                            <div class="table-title">
+                                <strong>{{ row.exam.title }}</strong>
+                                <span>{{ row.exam.exam_date.strftime("%Y-%m-%d") }}</span>
+                            </div>
+                        </td>
+                        <td>{{ row.stats.average if row.stats.average is not none else "—" }}</td>
+                        <td class="{% if row.change and row.change > 0 %}change-up{% elif row.change and row.change < 0 %}change-down{% endif %}">
+                            {% if row.change is not none %}{{ "+" if row.change > 0 else "" }}{{ row.change }}{% else %}—{% endif %}
+                        </td>
+                        <td>{{ row.stats.entered_count }} / {{ row.stats.class_size }}</td>
+                        <td>{{ row.stats.excellent_rate if row.stats.excellent_rate is not none else "—" }}{% if row.stats.excellent_rate is not none %}%{% endif %}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="empty-cell">暂无考试记录。</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">学生明细</p>
+            <h2>{{ latest_exam.title if latest_exam else "暂无考试" }}</h2>
+        </div>
+    </div>
+    <div class="document-table-wrap">
+        <table class="document-table compact-table">
+            <thead>
+                <tr>
+                    <th>学生</th>
+                    <th>成绩</th>
+                    <th>等级</th>
+                    <th>较上次</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.score_rows %}
+                <tr>
+                    <td>
+                        <a class="student-link" href="{{ url_for('student_detail', student_id=row.student.id) }}">
+                            <span class="avatar">{{ row.student.name[:1] }}</span>
+                            <span>{{ row.student.name }}</span>
+                        </a>
+                    </td>
+                    <td>{{ row.value if row.value is not none else "—" }}</td>
+                    <td>{{ row.grade }}</td>
+                    <td class="{% if row.change and row.change > 0 %}change-up{% elif row.change and row.change < 0 %}change-down{% endif %}">
+                        {% if row.change is not none %}{{ "+" if row.change > 0 else "" }}{{ row.change }}{% else %}—{% endif %}
+                    </td>
+                    <td>{{ row.status_label }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5" class="empty-cell">暂无学生成绩。</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<script>
+    window.classlistCharts = {
+        trend: {{ trend_data|tojson }},
+        distribution: {{ distribution|tojson }}
+    };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='chart.js') }}"></script>
+{% endblock %}

@@ -1,81 +1,125 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block head %}
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<script>
-    $(document).ready(function() {
-        $('#search').keyup(function() {
-            var value = $(this).val().toLowerCase();
-            $('.students-list li').filter(function() {
-                $(this).toggle($(this).data('name').toLowerCase().indexOf(value) > -1)
-            });
-            if ($('.students-list li:visible').length == 0) {
-                $('#not-found').show();
-            } else {
-                $('#not-found').hide();
-            }
-        });
+{% block title %}今日概览 · {{ app_name }}{% endblock %}
+{% block page_title %}{{ workspace.class_group.name if workspace.class_group else "教师成绩工作台" }}{% endblock %}
 
-        $('.students-list li').on('click', function(event) {
-            if (!$(event.target).is('a, button, input')) {
-                window.location.href = $(this).data('href');
-            }
-        });
-    });
-</script>
+{% block top_actions %}
+<a class="btn primary" href="{{ url_for('exam_entry', exam_id=latest_exam.id) if latest_exam else url_for('exams') }}">＋ 录入成绩</a>
 {% endblock %}
 
 {% block content %}
-<section class="page-hero">
-    <div>
-        <p class="eyebrow">学生档案</p>
-        <h1>班级名单</h1>
+{% if empty %}
+<section class="quiet-panel">
+    <p class="eyebrow">工作台</p>
+    <h2>先创建一个班级</h2>
+    <p class="muted">系统需要班级、学期和科目后，才能开始记录考试和成绩。</p>
+    <a class="btn primary" href="{{ url_for('settings') }}">去设置</a>
+</section>
+{% else %}
+<section class="dashboard-intro">
+    <div class="intro-copy">
+        <p class="eyebrow">{{ greeting }}，{{ current_user.name }}</p>
+        {% if latest_exam %}
+        <h2>最近一次考试整体表现{% if average_change and average_change > 0 %}有所提升{% elif average_change and average_change < 0 %}需要留意{% else %}保持稳定{% endif %}。</h2>
+        <p>
+            本学期已经记录 {{ exams_count }} 次考试。
+            最近一次是“{{ latest_exam.title }}”，
+            班级平均分 {{ latest_stats.average if latest_stats.average is not none else "—" }}{% if average_change is not none %}，较上次 {{ "+" if average_change > 0 else "" }}{{ average_change }} 分{% endif %}。
+        </p>
+        {% else %}
+        <h2>还没有考试记录。</h2>
+        <p>创建第一场考试后，这里会显示班级趋势、补录提醒和需要关注的学生。</p>
+        {% endif %}
     </div>
-    <div class="hero-stat">
-        <span>{{ students|length }}</span>
-        <small>位学生</small>
+    <div class="intro-metrics" aria-label="关键数字">
+        <div>
+            <strong>{{ latest_stats.average if latest_stats and latest_stats.average is not none else "—" }}</strong>
+            <span>最近平均分</span>
+        </div>
+        <div>
+            <strong>{% if average_change is not none %}{{ "+" if average_change > 0 else "" }}{{ average_change }}{% else %}—{% endif %}</strong>
+            <span>较上次变化</span>
+        </div>
+        <div>
+            <strong>{{ focus_rows|length }} 人</strong>
+            <span>需要关注</span>
+        </div>
     </div>
 </section>
 
-<section class="toolbar">
-    <div class="search-field">
-        <label for="search">搜索学生</label>
-        <input type="text" id="search" placeholder="输入姓名" autocomplete="off">
-    </div>
-    {% if current_user.is_authenticated %}
-    <form class="inline-add-form" method="post">
-        <label for="student-name">新增学生</label>
-        <div class="field-row">
-            <input id="student-name" type="text" name="name" placeholder="学生姓名" autocomplete="off" required>
-            <input class="btn primary" type="submit" name="submit" value="添加">
+{% if latest_exam %}
+<section class="content-grid two-column">
+    <article class="panel span-main">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">最近一次考试</p>
+                <h2>{{ latest_exam.title }}</h2>
+                <p class="muted">{{ latest_exam.exam_date.strftime("%Y-%m-%d") }} · {{ latest_exam.subject.name }}</p>
+            </div>
+            <a class="text-link" href="{{ url_for('analysis_class') }}">查看完整分析 →</a>
         </div>
-    </form>
-    {% endif %}
+        <div class="metric-row">
+            <div>
+                <span>平均分</span>
+                <strong>{{ latest_stats.average if latest_stats.average is not none else "—" }}</strong>
+            </div>
+            <div>
+                <span>及格率</span>
+                <strong>{{ latest_stats.pass_rate if latest_stats.pass_rate is not none else "—" }}{% if latest_stats.pass_rate is not none %}%{% endif %}</strong>
+            </div>
+            <div>
+                <span>优秀率</span>
+                <strong>{{ latest_stats.excellent_rate if latest_stats.excellent_rate is not none else "—" }}{% if latest_stats.excellent_rate is not none %}%{% endif %}</strong>
+            </div>
+        </div>
+        <div class="chart-panel">
+            <canvas id="trendChart" data-chart="trend"></canvas>
+        </div>
+    </article>
+
+    <aside class="panel">
+        <div class="panel-header compact">
+            <div>
+                <p class="eyebrow">录入进度</p>
+                <h2>{{ latest_stats.entered_count }} / {{ latest_stats.class_size }}</h2>
+            </div>
+            <span class="status-dot">{{ latest_stats.progress }}%</span>
+        </div>
+        <div class="progress-track" style="--progress: {{ latest_stats.progress }}%;"><span></span></div>
+        <div class="action-stack">
+            <a class="btn secondary" href="{{ url_for('exam_entry', exam_id=latest_exam.id) }}">继续录入</a>
+            <a class="btn ghost" href="{{ url_for('exams') }}">考试记录</a>
+        </div>
+    </aside>
+</section>
+{% endif %}
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">今日需要处理</p>
+            <h2>教学工作摘要</h2>
+        </div>
+    </div>
+    <div class="task-list">
+        {% for task in tasks %}
+        <a class="task-item" href="{{ task.url }}">
+            <span class="task-marker"></span>
+            <span>
+                <strong>{{ task.title }}</strong>
+                <small>{{ task.body }}</small>
+            </span>
+        </a>
+        {% endfor %}
+    </div>
 </section>
 
-<p id="not-found" class="alert alert-warning" style="display: none;">未找到该学生。</p>
-
-<ul class="students-list">
-    {% for student in students|reverse %}
-    <li data-name="{{ student.name }}" data-href="{{ url_for('course', student_id=student.id) }}">
-        <div class="student-meta">
-            <span class="avatar">{{ student.name[:1] }}</span>
-            <span class="student-name">{{ student.name }}</span>
-        </div>
-        <span class="item-actions">
-            {% if current_user.is_authenticated %}
-            <a class="btn ghost" href="{{ url_for('course', student_id=student.id) }}">成绩</a>
-            <a class="btn ghost" href="{{ url_for('edit', student_id=student.id) }}">编辑</a>
-            <form class="inline-form" method="post" action="{{ url_for('delete', student_id=student.id) }}">
-                <input class="btn danger" type="submit" name="submit" value="删除" onclick="return confirm('确定删除吗？')">
-            </form>
-            {% else %}
-            <a class="btn ghost" href="{{ url_for('course', student_id=student.id) }}">查看成绩</a>
-            {% endif %}
-        </span>
-    </li>
-    {% else %}
-    <li class="empty-state">暂无学生。</li>
-    {% endfor %}
-</ul>
+<script>
+    window.classlistCharts = {
+        trend: {{ trend_data|tojson }}
+    };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='chart.js') }}"></script>
+{% endif %}
 {% endblock %}
