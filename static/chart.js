@@ -8,7 +8,7 @@ function createChart() {
             let datasets = [];
             let all_dates = new Set();
 
-            Promise.all(course_ids.map(course_id => fetch(`/course/${course_id}`)
+            Promise.all(course_ids.map(course_id => fetch(`/course/${course_id}/${student_id}`)
                 .then(response => response.json())
                 .then(data => {
                     data.forEach(item => {
@@ -35,7 +35,7 @@ function createChart() {
                     }); // end of courseDate.forEach
                     if (datasets.length === course_ids.length) {
                         const ctx = document.getElementById('myChart').getContext('2d');
-                        ctx.fillStyle = 'yeallow';
+                        ctx.fillStyle = 'yellow';
                         ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                         new Chart(ctx, {
                             type: 'line',
